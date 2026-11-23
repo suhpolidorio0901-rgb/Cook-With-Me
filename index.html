@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>UniqueOS Launcher</title>
+<style>
+  :root {
+    --bg-wallpaper: linear-gradient(160deg, #1e0b36 0%, #4c1d95 45%, #7c3aed 100%);
+    --glass-bg: rgba(25, 18, 45, 0.72);
+    --glass-light: rgba(255, 255, 255, 0.14);
+    --glass-border: rgba(255, 255, 255, 0.18);
+    --accent: #a855f7;
+    --accent-glow: rgba(168, 85, 247, 0.45);
+    --text-main: #ffffff;
+    --text-sub: rgba(255, 255, 255, 0.7);
+    --app-bg: #12101c;
+    --app-card: #1d192b;
+    --app-text: #f8fafc;
+  }
+
+  body.light-mode {
+    --app-bg: #f3f4f6;
+    --app-card: #ffffff;
+    --app-text: #111827;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  body {
+    background: #090710;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Moldura responsiva: ocupa 100% no celular e simula tela mobile no PC */
+  #device-screen {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    max-width: 430px;
+    max-height: 932px;
+    background: var(--bg-wallpaper);
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85);
+  }
+
+  @media (min-width: 450px) {
+    #device-screen {
+      height: 92vh;
+      border-radius: 38px;
+      border: 6px solid #262136;
+    }
+  }
+
+  /* Efeito de Brilho */
+  #brightness-overlay {
+    position: absolute;
+    inset: 0;
+    background: #000;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 9999;
+    transition: opacity 0.2s;
+  }
+
+  /* BARRA DE STATUS SUPERIOR */
+  #status-bar {
+    height: 34px;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 500;
+    cursor: pointer;
+  }
+
+  .status-icons {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  /* CENTRAL DE CONTROLE (QUICK SETTINGS) */
+  #quick-panel {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    right: 0;
+    background: rgba(18, 14, 32, 0.94);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    padding: 44px 20px 24px;
+    border-bottom-left-radius: 28px;
+    border-bottom-right-radius: 28px;
+    border-bottom: 1px solid var(--glass-border);
+    z-index: 490;
+    transition: top 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    color: #fff;
+  }
+
+  #quick-panel.open {
+    top: 0;
+  }
+
+  .qs-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .qs-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 18px;
+    padding: 14px 6px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .qs-btn.active {
+    background: var(--accent);
+    box-shadow: 0 4px 15px var(--accent-glow);
+  }
+
+  .qs-btn span.ico {
+    font-size: 20px;
+  }
+
+  .qs-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255,255,255,0.08);
+    padding: 10px 14px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+  }
+
+  .qs-slider-row input[type="range"] {
+    flex: 1;
+    accent-color: var(--accent);
+  }
+
+  /* TELA DE BLOQUEIO (LOCK SCREEN) */
+  #lock-screen {
+    position: absolute;
+    inset: 0;
+    background: rgba(14, 9, 28, 0.65);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    z-index: 800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 64px 24px 40px;
+    color: #fff;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.35s;
+  }
+
+  #lock-screen.unlocked {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .lock-clock {
+    text-align: center;
+  }
+
+  .lock-time {
+    font-size: 68px;
+    font-weight: 300;
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+
+  .lock-date {
+    font-size: 15px;
+    color: var(--text-sub);
+    margin-top: 8px;
+  }
+
+  .pin-area {
+    width: 100%;
+    max-width: 280px;
+    text-align: center;
+  }
+
+  .pin-dots {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin: 16px 0 24px;
+  }
+
+  .pin-dot {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.6);
+    transition: 0.2s;
+  }
+
+  .pin-dot.filled {
+    background: #fff;
+    border-color: #fff;
+    transform: scale(1.15);
+  }
+
+  .keypad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  .key-btn {
+    height: 62px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font-size: 22px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+
+  .key-btn:active {
+    background: rgba(255,255,255,0.35);
+    transform: scale(0.94);
+  }
+
+  /* TELA INICIAL (HOME SCREEN LAUNCHER) */
+  #home-screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 12px 18px 14px;
+    z-index: 10;
+  }
+
+  /* Widget Relógio + Pesquisa */
+  .home-widgets {
+    margin-top: 8px;
+  }
+
+  .widget-clock-card {
+    padding: 12px 6px;
+    color: #fff;
+  }
+
+  .widget-clock-card h1 {
+    font-size: 46px;
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  .widget-clock-card p {
+    font-size: 14px;
+    color: var(--text-sub);
+    margin-top: 4px;
+  }
+
+  .search-pill {
+    margin-top: 14px;
+    background: rgba(255, 255, 255, 0.16);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border);
+    border-radius: 26px;
+    padding: 11px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+  }
+
+  .search-pill input {
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-size: 14px;
+    width: 100%;
+  }
+
+  .search-pill input::placeholder {
+    color: rgba(255,255,255,0.75);
+  }
+
+  /* Grade de Aplicativos da Home */
+  .app-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px 10px;
+    margin: auto 0;
+    padding: 10px 0;
+  }
+
+  .app-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .app-item:active {
+    transform: scale(0.9);
+  }
+
+  .app-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.2);
+  }
+
+  .app-label {
+    font-size: 11.5px;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 74px;
+  }
+
+  /* Indicador de Página & Dock Inferior */
+  .page-dots {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .page-dots span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.35);
+  }
+
+  .page-dots span.active {
+    background: #fff;
+    width: 14px;
+    border-radius: 4px;
+  }
+
+  #dock {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 28px;
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  #dock .app-label {
+    display: none;
+  }
+
+  /* GAVETA DE APLICATIVOS (APP DRAWER) */
+  #app-drawer {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 11, 28, 0.92);
+    backdrop-filter: blur(26px);
+    -webkit-backdrop-filter: blur(26px);
+    z-index: 200;
+    padding: 46px 20px 34px;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  #app-drawer.open {
+    transform: translateY(0);
+  }
+
+  .drawer-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .drawer-search {
+    flex: 1;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 10px 14px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+  }
+
+  .drawer-close {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .drawer-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px 10px;
+    overflow-y: auto;
+    padding-bottom: 20px;
+  }
+
+  /* CONTAINER DE APLICATIVOS EM TELA CHEIA */
+  #app-viewport {
+    position: absolute;
+    inset: 0;
+    top: 34px;
+    background: var(--app-bg);
+    color: var(--app-text);
+    z-index: 300;
+    display: flex;
+    flex-direction: column;
+    transform: scale(0.92) translateY(30px);
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  #app-viewport.active {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .app-topbar {
+    height: 48px;
+    padding: 0 16px;
+    background: var(--app-card);
+    border-bottom: 1px solid rgba(128,128,128,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .app-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* BARRA DE GESTOS INFERIOR (HOME PILL) */
+  #gesture-bar-area {
+    height: 24px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 600;
+    cursor: pointer;
+    background: transparent;
+  }
+
+  #gesture-pill {
+    width: 130px;
+    height: 5px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+    transition: 0.2s;
+  }
+
+  #gesture-bar-area:active #gesture-pill {
+    transform: scaleX(1.1);
+    background: #fff;
+  }
+
+  /* ESTILOS INTERNOS DOS APPS */
+  .btn-ui {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 9px 14px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .input-ui {
+    background: rgba(128,128,128,0.14);
+    border: 1px solid rgba(128,128,128,0.25);
+    color: inherit;
+    padding: 9px 12px;
+    border-radius: 10px;
+    outline: none;
+  }
+
+  /* Calculadora */
+  .calc-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: auto;
+  }
+  .calc-btn {
+    padding: 18px;
+    font-size: 20px;
+    border-radius: 16px;
+    border: none;
+    background: var(--app-card);
+    color: var(--app-text);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .calc-btn.op { background: var(--accent); color: #fff; }
+
+  /* Terminal */
+  .term-box {
+    background: #090d16;
+    color: #22c55e;
+    font-family: monospace;
+    padding: 12px;
+    border-radius: 12px;
+    flex: 1;
+    overflow-y: auto;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<div id="device-screen">
+  <div id="brightness-overlay"></div>
+
+  <!-- BARRA DE STATUS -->
+  <div id="status-bar" onclick="toggleQuickPanel()">
+    <span id="sb-time">23:19</span>
+    <div class="status-icons">
+      <span id="sb-wifi">📶 5G</span>
+      <span id="sb-bt">ᛒ</span>
+      <span>🔋 94%</span>
+    </div>
+  </div>
+
+  <!-- CENTRAL DE CONTROLE DESLIZÁVEL -->
+  <div id="quick-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <span style="font-weight:700; font-size:15px;">UniqueOS Control</span>
+      <button onclick="toggleQuickPanel()" style="background:none; border:none; color:#fff; font-size:18px; cursor:pointer;">✕</button>
+    </div>
+    <div class="qs-grid">
+      <button class="qs-btn active" id="qs-wifi" onclick="toggleQS(this, 'wifi')"><span class="ico">📶</span>Wi-Fi</button>
+      <button class="qs-btn active" id="qs-bt" onclick="toggleQS(this, 'bt')"><span class="ico">ᛒ</span>Bluetooth</button>
+      <button class="qs-btn" id="qs-theme" onclick="toggleTheme(this)"><span class="ico">☀️</span>Tema Claro</button>
+      <button class="qs-btn" onclick="lockDevice()"><span class="ico">🔒</span>Bloquear</button>
+    </div>
+    <div class="qs-slider-row">
+      <span>🔆</span>
+      <input type="range" min="15" max="100" value="100" oninput="setBrightness(this.value)">
+    </div>
+  </div>
+
+  <!-- TELA DE BLOQUEIO -->
+  <div id="lock-screen">
+    <div class="lock-clock">
+      <div class="lock-time" id="lock-time">23:19</div>
+      <div class="lock-date" id="lock-date">Domingo, 22 de Novembro</div>
+    </div>
+
+    <div class="pin-area">
+      <div style="font-size:13px; opacity:0.85;" id="pin-msg">Digite o PIN (Padrão: 1234)</div>
+      <div class="pin-dots">
+        <div class="pin-dot" id="dot-0"></div>
+        <div class="pin-dot" id="dot-1"></div>
+        <div class="pin-dot" id="dot-2"></div>
+        <div class="pin-dot" id="dot-3"></div>
+      </div>
+      <div class="keypad">
+        <button class="key-btn" onclick="pressPin('1')">1</button>
+        <button class="key-btn" onclick="pressPin('2')">2</button>
+        <button class="key-btn" onclick="pressPin('3')">3</button>
+        <button class="key-btn" onclick="pressPin('4')">4</button>
+        <button class="key-btn" onclick="pressPin('5')">5</button>
+        <button class="key-btn" onclick="pressPin('6')">6</button>
+        <button class="key-btn" onclick="pressPin('7')">7</button>
+        <button class="key-btn" onclick="pressPin('8')">8</button>
+        <button class="key-btn" onclick="pressPin('9')">9</button>
+        <button class="key-btn" style="font-size:14px;" onclick="clearPin()">Limpar</button>
+        <button class="key-btn" onclick="pressPin('0')">0</button>
+        <button class="key-btn" style="font-size:16px;" onclick="unlockInstant()">🔓</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA INICIAL DO LAUNCHER -->
+  <div id="home-screen">
+    <div class="home-widgets">
+      <div class="widget-clock-card">
+        <h1 id="home-time">23:19</h1>
+        <p id="home-date">Dom, 22 Nov • São Paulo 23°C</p>
+      </div>
+      <div class="search-pill">
+        <span>🔍</span>
+        <input type="text" placeholder="Pesquisar na web ou apps..." onkeydown="if(event.key==='Enter') searchFromHome(this.value)">
+      </div>
+    </div>
+
+    <!-- GRADE PRINCIPAL DE APPS -->
+    <div class="app-grid" id="home-app-grid"></div>
+
+    <div>
+      <div class="page-dots">
+        <span class="active"></span>
+        <span></span>
+      </div>
+
+      <!-- DOCK INFERIOR FIXO -->
+      <div id="dock">
+        <div class="app-item" onclick="openApp('browser')">
+          <div class="app-icon" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">🌐</div>
+          <span class="app-label">Navegador</span>
+        </div>
+        <div class="app-item" onclick="openApp('camera')">
+          <div class="app-icon" style="background:linear-gradient(135deg,#475569,#1e293b)">📷</div>
+          <span class="app-label">Câmera</span>
+        </div>
+        <div class="app-item" onclick="openApp('settings')">
+          <div class="app-icon" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9)">⚙️</div>
+          <span class="app-label">Ajustes</span>
+        </div>
+        <div class="app-item" onclick="toggleDrawer(true)">
+          <div class="app-icon" style="background:rgba(255,255,255,0.22)">⋮⋮⋮</div>
+          <span class="app-label">Todos Apps</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAVETA DE APLICATIVOS (APP DRAWER) -->
+  <div id="app-drawer">
+    <div class="drawer-header">
+      <input type="text" class="drawer-search" placeholder="Filtrar aplicativos..." oninput="filterDrawer(this.value)">
+      <button class="drawer-close" onclick="toggleDrawer(false)">✕</button>
+    </div>
+    <div class="drawer-grid" id="drawer-app-grid"></div>
+  </div>
+
+  <!-- VIEWPORT DE APLICATIVO ABERTO EM TELA CHEIA -->
+  <div id="app-viewport">
+    <div class="app-topbar">
+      <span id="active-app-title">Aplicativo</span>
+      <button onclick="closeApp()" style="background:rgba(239,68,68,0.18); color:#ef4444; border:none; padding:5px 10px; border-radius:8px; font-weight:700; cursor:pointer;">Fechar</button>
+    </div>
+    <div class="app-content" id="active-app-body"></div>
+  </div>
+
+  <!-- BARRA DE GESTOS INFERIOR (VOLTAR PARA HOME) -->
+  <div id="gesture-bar-area" onclick="goHome()" title="Toque para voltar à Tela Inicial">
+    <div id="gesture-pill"></div>
+  </div>
+</div>
+
+<script>
+  /* REGISTRO DE APLICATIVOS DO UNIQUEOS */
+  const APPS = [
+    { id: 'browser', name: 'Navegador', icon: '🌐', color: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', home: true },
+    { id: 'store', name: 'Unique Store', icon: '🛍️', color: 'linear-gradient(135deg,#ec4899,#be185d)', home: true },
+    { id: 'camera', name: 'Câmera', icon: '📷', color: 'linear-gradient(135deg,#64748b,#334155)', home: true },
+    { id: 'gallery', name: 'Galeria', icon: '🖼️', color: 'linear-gradient(135deg,#f59e0b,#d97706)', home: true },
+    { id: 'notes', name: 'Notas', icon: '📝', color: 'linear-gradient(135deg,#eab308,#ca8a04)', home: true },
+    { id: 'calc', name: 'Calculadora', icon: '🧮', color: 'linear-gradient(135deg,#10b981,#059669)', home: true },
+    { id: 'translator', name: 'Tradutor', icon: '🗣️', color: 'linear-gradient(135deg,#06b6d4,#0891b2)', home: true },
+    { id: 'terminal', name: 'Terminal', icon: '💻', color: 'linear-gradient(135deg,#18181b,#3f3f46)', home: true },
+    { id: 'paint', name: 'Paint Studio', icon: '🎨', color: 'linear-gradient(135deg,#f43f5e,#e11d48)', home: false },
+    { id: 'music', name: 'Música', icon: '🎵', color: 'linear-gradient(135deg,#8b5cf6,#6d28d9)', home: false },
+    { id: 'game', name: 'Block Tap', icon: '🎮', color: 'linear-gradient(135deg,#22c55e,#15803d)', home: false },
+    { id: 'settings', name: 'Ajustes', icon: '⚙️', color: 'linear-gradient(135deg,#6366f1,#4338ca)', home: false }
+  ];
+
+  let systemPin = "1234";
+  let currentPinInput = "";
+  let savedPhotos = [];
+  let savedNotes = ["Bem-vindo ao UniqueOS Launcher!", "Toque na barra inferior para voltar à tela inicial."];
+  let cameraStream = null;
+
+  /* RELÓGIO EM TEMPO REAL */
+  function updateClocks() {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    const timeStr = `${hh}:${mm}`;
+    document.getElementById('sb-time').textContent = timeStr;
+    document.getElementById('lock-time').textContent = timeStr;
+    document.getElementById('home-time').textContent = timeStr;
+  }
+  setInterval(updateClocks, 1000);
+  updateClocks();
+
+  /* RENDERIZAR ÍCONES NA HOME E NA GAVETA */
+  function renderGrids(filter = "") {
+    const homeGrid = document.getElementById('home-app-grid');
+    const drawerGrid = document.getElementById('drawer-app-grid');
+    homeGrid.innerHTML = "";
+    drawerGrid.innerHTML = "";
+
+    APPS.forEach(app => {
+      if (app.home) {
+        homeGrid.innerHTML += `
+          <div class="app-item" onclick="openApp('${app.id}')">
+            <div class="app-icon" style="background:${app.color}">${app.icon}</div>
+            <span class="app-label">${app.name}</span>
+          </div>`;
+      }
+      if (app.name.toLowerCase().includes(filter.toLowerCase())) {
+        drawerGrid.innerHTML += `
+          <div class="app-item" onclick="openApp('${app.id}')">
+            <div class="app-icon" style="background:${app.color}">${app.icon}</div>
+            <span class="app-label">${app.name}</span>
+          </div>`;
+      }
+    });
+  }
+  renderGrids();
+
+  /* TELA DE BLOQUEIO & PIN */
+  function pressPin(num) {
+    if (currentPinInput.length < 4) {
+      currentPinInput += num;
+      updatePinDots();
+      if (currentPinInput.length === 4) {
+        if (currentPinInput === systemPin) {
+          setTimeout(() => {
+            document.getElementById('lock-screen').classList.add('unlocked');
+            clearPin();
+          }, 150);
+        } else {
+          document.getElementById('pin-msg').textContent = "PIN incorreto! Tente 1234";
+          setTimeout(clearPin, 500);
+        }
+      }
+    }
+  }
+
+  function updatePinDots() {
+    for (let i = 0; i < 4; i++) {
+      document.getElementById(`dot-${i}`).classList.toggle('filled', i < currentPinInput.length);
+    }
+  }
+
+  function clearPin() {
+    currentPinInput = "";
+    updatePinDots();
+  }
+
+  function unlockInstant() {
+    document.getElementById('lock-screen').classList.add('unlocked');
+  }
+
+  function lockDevice() {
+    toggleQuickPanel(false);
+    closeApp();
+    document.getElementById('lock-screen').classList.remove('unlocked');
+  }
+
+  /* CENTRAL DE CONTROLE E GAVETA */
+  function toggleQuickPanel(force) {
+    const qp = document.getElementById('quick-panel');
+    if (typeof force === 'boolean') qp.classList.toggle('open', force);
+    else qp.classList.toggle('open');
+  }
+
+  function toggleQS(btn, type) {
+    btn.classList.toggle('active');
+    if (type === 'wifi') document.getElementById('sb-wifi').style.opacity = btn.classList.contains('active') ? '1' : '0.3';
+    if (type === 'bt') document.getElementById('sb-bt').style.opacity = btn.classList.contains('active') ? '1' : '0.3';
+  }
+
+  function toggleTheme(btn) {
+    btn.classList.toggle('active');
+    document.body.classList.toggle('light-mode');
+  }
+
+  function setBrightness(val) {
+    const overlay = document.getElementById('brightness-overlay');
+    overlay.style.opacity = (100 - val) / 115;
+  }
+
+  function toggleDrawer(open) {
+    document.getElementById('app-drawer').classList.toggle('open', open);
+  }
+
+  function filterDrawer(val) {
+    renderGrids(val);
+  }
+
+  function goHome() {
+    toggleQuickPanel(false);
+    toggleDrawer(false);
+    closeApp();
+  }
+
+  function searchFromHome(query) {
+    if (!query.trim()) return;
+    openApp('browser', query);
+  }
+
+  /* GERENCIADOR DE APPS EM TELA CHEIA */
+  function openApp(id, param = "") {
+    toggleDrawer(false);
+    toggleQuickPanel(false);
+    stopCamera();
+
+    const app = APPS.find(a => a.id === id);
+    if (!app) return;
+
+    document.getElementById('active-app-title').textContent = `${app.icon} ${app.name}`;
+    const body = document.getElementById('active-app-body');
+    document.getElementById('app-viewport').classList.add('active');
+
+    if (id === 'browser') {
+      const startUrl = param ? `https://www.google.com/search?igu=1&q=${encodeURIComponent(param)}` : 'https://pt.m.wikipedia.org';
+      body.innerHTML = `
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <input id="url-bar" class="input-ui" style="flex:1" value="${startUrl}">
+          <button class="btn-ui" onclick="document.getElementById('web-frame').src = document.getElementById('url-bar').value">Ir</button>
+        </div>
+        <iframe id="web-frame" src="${startUrl}" style="flex:1; border:none; border-radius:12px; background:#fff;"></iframe>`;
+    }
+    else if (id === 'calc') {
+      body.innerHTML = `
+        <input id="calc-disp" class="input-ui" style="font-size:32px; text-align:right; padding:18px; margin-bottom:14px;" readonly value="0">
+        <div class="calc-grid">
+          ${['7','8','9','/','4','5','6','*','1','2','3','-','C','0','=','+'].map(k =>
+            `<button class="calc-btn ${['/','*','-','+','='].includes(k)?'op':''}" onclick="calcPress('${k}')">${k}</button>`
+          ).join('')}
+        </div>`;
+    }
+    else if (id === 'notes') {
+      renderNotesApp(body);
+    }
+    else if (id === 'camera') {
+      body.innerHTML = `
+        <video id="cam-video" autoplay playsinline style="width:100%; border-radius:16px; background:#000; flex:1; object-fit:cover;"></video>
+        <button class="btn-ui" style="margin-top:12px; padding:14px; font-size:16px;" onclick="takeSnapshot()">📸 Tirar Foto</button>`;
+      navigator.mediaDevices?.getUserMedia({ video: true }).then(stream => {
+        cameraStream = stream;
+        document.getElementById('cam-video').srcObject = stream;
+      }).catch(() => {
+        body.innerHTML = `<p style="text-align:center; margin-top:40px;">Permissão de câmera indisponível neste navegador.</p>`;
+      });
+    }
+    else if (id === 'gallery') {
+      body.innerHTML = savedPhotos.length
+        ? `<div style="display:grid; grid-template-columns:repeat(2,1fr); gap:10px;">${savedPhotos.map(src => `<img src="${src}" style="width:100%; border-radius:12px;">`).join('')}</div>`
+        : `<p style="text-align:center; opacity:0.7; margin-top:40px;">Nenhuma foto capturada ainda. Abra a Câmera!</p>`;
+    }
+    else if (id === 'terminal') {
+      body.innerHTML = `
+        <div class="term-box" id="term-out">UniqueOS Mobile Kernel v2.6<br>Digite 'help' para ver os comandos.<br><br></div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <input id="term-in" class="input-ui" style="flex:1; font-family:monospace;" placeholder="comando..." onkeydown="if(event.key==='Enter') runCmd()">
+          <button class="btn-ui" onclick="runCmd()">Run</button>
+        </div>`;
+    }
+    else if (id === 'translator') {
+      body.innerHTML = `
+        <textarea id="tr-in" class="input-ui" rows="4" placeholder="Digite em Português (ex: olá, obrigado, sistema, celular)..."></textarea>
+        <button class="btn-ui" style="margin:12px 0;" onclick="translateText()">Traduzir para Inglês</button>
+        <div id="tr-out" style="padding:14px; border-radius:12px; background:var(--app-card); min-height:80px;">Resultado aparecerá aqui...</div>`;
+    }
+    else if (id === 'store') {
+      body.innerHTML = `
+        <h3 style="margin-bottom:12px;">Destaques Unique Store</h3>
+        <div style="background:var(--app-card); padding:14px; border-radius:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>UniqueOS Pro Icon Pack</strong><br><small style="opacity:0.7">Ícones roxos neon</small></div>
+          <button class="btn-ui" onclick="alert('Tema aplicado com sucesso!')">Instalar</button>
+        </div>
+        <div style="background:var(--app-card); padding:14px; border-radius:14px; display:flex; justify-content:space-between; align-items:center;">
+          <div><strong>Super Slime Mini</strong><br><small style="opacity:0.7">Jogo casual offline</small></div>
+          <button class="btn-ui" onclick="openApp('game')">Jogar</button>
+        </div>`;
+    }
+    else if (id === 'settings') {
+      body.innerHTML = `
+        <div style="background:var(--app-card); padding:14px; border-radius:14px; margin-bottom:12px;">
+          <strong>Papel de Parede do Launcher</strong>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button class="btn-ui" style="background:#6d28d9" onclick="setWallpaper('linear-gradient(160deg, #1e0b36 0%, #4c1d95 45%, #7c3aed 100%)')">Roxo Unique</button>
+            <button class="btn-ui" style="background:#0284c7" onclick="setWallpaper('linear-gradient(160deg, #0f172a 0%, #0369a1 100%)')">Oceano</button>
+            <button class="btn-ui" style="background:#be185d" onclick="setWallpaper('linear-gradient(160deg, #2e1065 0%, #be185d 100%)')">Neon</button>
+          </div>
+        </div>
+        <div style="background:var(--app-card); padding:14px; border-radius:14px;">
+          <strong>Alterar PIN de Bloqueio</strong>
+          <div style="display:flex; gap:8px; margin-top:10px;">
+            <input id="new-pin" class="input-ui" maxlength="4" placeholder="Novo PIN (4 dígitos)">
+            <button class="btn-ui" onclick="changePin()">Salvar</button>
+          </div>
+        </div>`;
+    }
+    else if (id === 'paint') {
+      body.innerHTML = `
+        <canvas id="paint-cv" width="360" height="420" style="background:#fff; border-radius:14px; width:100%; touch-action:none;"></canvas>
+        <button class="btn-ui" style="margin-top:10px;" onclick="openApp('paint')">Limpar Tela</button>`;
+      initPaint();
+    }
+    else if (id === 'music') {
+      body.innerHTML = `
+        <div style="text-align:center; margin:auto;">
+          <div style="font-size:64px; margin-bottom:16px;">🎧</div>
+          <h3>Unique Synthwave Beat</h3>
+          <p style="opacity:0.7; margin-bottom:20px;">Áudio sintetizado nativo</p>
+          <button class="btn-ui" onclick="playBeep()">▶️ Tocar Batida</button>
+        </div>`;
+    }
+    else if (id === 'game') {
+      body.innerHTML = `
+        <div style="text-align:center; margin:auto;">
+          <h2 id="score-txt">Pontos: 0</h2>
+          <button id="tap-target" class="btn-ui" style="width:140px; height:140px; border-radius:28px; font-size:32px; margin-top:24px;" onclick="scoreTap()">🟪</button>
+        </div>`;
+    }
+  }
+
+  function closeApp() {
+    stopCamera();
+    document.getElementById('app-viewport').classList.remove('active');
+  }
+
+  /* FUNÇÕES AUXILIARES DOS APPS */
+  function calcPress(k) {
+    const d = document.getElementById('calc-disp');
+    if (k === 'C') d.value = '0';
+    else if (k === '=') { try { d.value = eval(d.value); } catch { d.value = 'Erro'; } }
+    else d.value = d.value === '0' ? k : d.value + k;
+  }
+
+  function renderNotesApp(body) {
+    body.innerHTML = `
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <input id="note-in" class="input-ui" style="flex:1" placeholder="Nova anotação...">
+        <button class="btn-ui" onclick="addNote()">+</button>
+      </div>
+      ${savedNotes.map(n => `<div style="background:var(--app-card); padding:12px; border-radius:12px; margin-bottom:8px;">${n}</div>`).join('')}`;
+  }
+
+  function addNote() {
+    const inp = document.getElementById('note-in');
+    if (inp.value.trim()) {
+      savedNotes.unshift(inp.value.trim());
+      renderNotesApp(document.getElementById('active-app-body'));
+    }
+  }
+
+  function takeSnapshot() {
+    const v = document.getElementById('cam-video');
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth || 300;
+    c.height = v.videoHeight || 300;
+    c.getContext('2d').drawImage(v, 0, 0);
+    savedPhotos.unshift(c.toDataURL('image/png'));
+    alert('Foto salva na Galeria!');
+  }
+
+  function stopCamera() {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      cameraStream = null;
+    }
+  }
+
+  function runCmd() {
+    const inp = document.getElementById('term-in');
+    const out = document.getElementById('term-out');
+    const cmd = inp.value.trim().toLowerCase();
+    out.innerHTML += `<div>$ ${cmd}</div>`;
+    if (cmd === 'help') out.innerHTML += `<div>Comandos: help, clear, date, lock, version</div>`;
+    else if (cmd === 'clear') out.innerHTML = '';
+    else if (cmd === 'date') out.innerHTML += `<div>${new Date().toString()}</div>`;
+    else if (cmd === 'version') out.innerHTML += `<div>UniqueOS Launcher 2.0 Mobile</div>`;
+    else if (cmd === 'lock') lockDevice();
+    else out.innerHTML += `<div>Comando não reconhecido.</div>`;
+    inp.value = '';
+    out.scrollTop = out.scrollHeight;
+  }
+
+  function translateText() {
+    const dict = { "olá": "hello", "oi": "hi", "obrigado": "thank you", "sistema": "system", "celular": "smartphone", "roxo": "purple" };
+    const words = document.getElementById('tr-in').value.toLowerCase().split(/\s+/);
+    const res = words.map(w => dict[w] || w).join(' ');
+    document.getElementById('tr-out').textContent = res;
+  }
+
+  function setWallpaper(bg) {
+    document.getElementById('device-screen').style.background = bg;
+  }
+
+  function changePin() {
+    const val = document.getElementById('new-pin').value;
+    if (/^\d{4}$/.test(val)) {
+      systemPin = val;
+      alert('PIN atualizado com sucesso!');
+    } else {
+      alert('Digite exatamente 4 números.');
+    }
+  }
+
+  function initPaint() {
+    const cv = document.getElementById('paint-cv');
+    const ctx = cv.getContext('2d');
+    ctx.strokeStyle = '#7c3aed';
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    let drawing = false;
+    const pos = e => {
+      const r = cv.getBoundingClientRect();
+      const t = e.touches ? e.touches[0] : e;
+      return { x: (t.clientX - r.left) * (cv.width / r.width), y: (t.clientY - r.top) * (cv.height / r.height) };
+    };
+    cv.onpointerdown = e => { drawing = true; const p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); };
+    cv.onpointermove = e => { if (!drawing) return; const p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); };
+    cv.onpointerup = () => drawing = false;
+  }
+
+  function playBeep() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(440, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+    osc.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  }
+
+  let taps = 0;
+  function scoreTap() {
+    taps++;
+    document.getElementById('score-txt').textContent = `Pontos: ${taps}`;
+  }
+</script>
+</body>
+</html>
